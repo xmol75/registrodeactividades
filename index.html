@@ -208,7 +208,9 @@
             onAuthStateChanged,
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
-            signOut
+            signOut,
+            setPersistence,
+            browserSessionPersistence
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -249,28 +251,43 @@
 
         // --- MANEJO DE AUTENTICACIÓN ---
         
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // Usuario está logueado
-                currentUserId = user.uid;
-                console.log("Usuario autenticado:", currentUserId);
-                surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
-                
-                authContainer.classList.add('hidden');
-                appContainer.classList.remove('hidden');
+        function initializeAuthListener() {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    // Usuario está logueado
+                    currentUserId = user.uid;
+                    console.log("Usuario autenticado:", currentUserId);
+                    surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
+                    
+                    authContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
 
-                listenForData();
-            } else {
-                // Usuario no está logueado
-                console.log("Usuario no autenticado.");
-                if (unsubscribeSurgeries) unsubscribeSurgeries(); // Detener escucha de datos
-                currentUserId = null;
-                surgeriesCollectionRef = null;
+                    listenForData();
+                } else {
+                    // Usuario no está logueado
+                    console.log("Usuario no autenticado.");
+                    if (unsubscribeSurgeries) unsubscribeSurgeries(); // Detener escucha de datos
+                    currentUserId = null;
+                    surgeriesCollectionRef = null;
 
-                authContainer.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-            }
-        });
+                    authContainer.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        // Establecer la persistencia de la sesión antes de inicializar el listener
+        setPersistence(auth, browserSessionPersistence)
+            .then(() => {
+                // Una vez establecida la persistencia, inicializar el listener de autenticación
+                initializeAuthListener();
+            })
+            .catch((error) => {
+                console.error("Error al establecer la persistencia:", error);
+                // En caso de error, inicializar de todas formas
+                initializeAuthListener();
+            });
+
 
         // Cambiar a formulario de registro
         showRegisterBtn.addEventListener('click', () => {
