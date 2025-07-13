@@ -36,20 +36,63 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <!-- Pantalla de carga inicial -->
-    <div id="initial-loader" class="fixed inset-0 bg-gray-50 flex items-center justify-center z-50 text-center p-4">
-        <p>Conectando con la base de datos...</p>
+    <!-- Pantalla de Autenticación (Login/Registro) -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <!-- Formulario de Login (visible por defecto) -->
+                <form id="login-form">
+                    <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+                    <div id="login-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="login-email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Entrar</button>
+                    <p class="text-sm text-center mt-4">
+                        ¿No tienes cuenta? <button type="button" id="show-register-btn" class="text-blue-600 hover:underline font-semibold">Regístrate</button>
+                    </p>
+                </form>
+
+                <!-- Formulario de Registro (oculto por defecto) -->
+                <form id="register-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
+                     <div id="register-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="register-email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña (mín. 6 caracteres)</label>
+                        <input type="password" id="register-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Registrarse</button>
+                    <p class="text-sm text-center mt-4">
+                        ¿Ya tienes cuenta? <button type="button" id="show-login-btn" class="text-blue-600 hover:underline font-semibold">Inicia Sesión</button>
+                    </p>
+                </form>
+            </div>
+        </div>
     </div>
 
-
-    <!-- Contenedor Principal de la App -->
+    <!-- Contenedor Principal de la App (Oculto hasta el login) -->
     <div id="app-container" class="min-h-screen p-4 sm:p-6 lg:p-8 hidden">
         <div class="max-w-7xl mx-auto">
             
             <!-- Cabecera -->
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">Registro de actividad quirúrgica extra</h1>
-                <p class="text-gray-600 mt-1">Panel de control para tu actividad quirúrgica y cobros.</p>
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Registro de actividad quirúrgica extra</h1>
+                    <p class="text-gray-600 mt-1">Panel de control para tu actividad quirúrgica y cobros.</p>
+                </div>
+                <button id="logout-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Cerrar Sesión
+                </button>
             </header>
 
             <!-- Contenido de la App -->
@@ -164,7 +207,8 @@
             getAuth, 
             onAuthStateChanged,
             createUserWithEmailAndPassword,
-            signInWithEmailAndPassword
+            signInWithEmailAndPassword,
+            signOut
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -184,10 +228,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Credenciales para el usuario único
-        const FIXED_USER_EMAIL = "user@registros-quirurgicos.com";
-        const FIXED_USER_PASSWORD = "password-seguro-para-registros";
-
         let currentUserId = null;
         let surgeriesCollectionRef = null;
         let unsubscribeSurgeries = null;
@@ -195,51 +235,97 @@
         let currentFilter = 'all';
 
         // --- ELEMENTOS DEL DOM ---
-        const initialLoader = document.getElementById('initial-loader');
+        const authContainer = document.getElementById('auth-container');
         const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const showRegisterBtn = document.getElementById('show-register-btn');
+        const showLoginBtn = document.getElementById('show-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginError = document.getElementById('login-error');
+        const registerError = document.getElementById('register-error');
         const tableLoader = document.getElementById('table-loader');
         const tableContainer = document.getElementById('table-container');
 
-        // --- MANEJO DE AUTENTICACIÓN AUTOMÁTICA ---
+        // --- MANEJO DE AUTENTICACIÓN ---
         
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // Usuario está logueado
                 currentUserId = user.uid;
-                console.log("Sesión iniciada para el usuario:", currentUserId);
+                console.log("Usuario autenticado:", currentUserId);
                 surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
                 
-                initialLoader.classList.add('hidden');
+                authContainer.classList.add('hidden');
                 appContainer.classList.remove('hidden');
 
                 listenForData();
             } else {
-                // Si no hay usuario, intentar login/registro automático
-                autoLogin();
+                // Usuario no está logueado
+                console.log("Usuario no autenticado.");
+                if (unsubscribeSurgeries) unsubscribeSurgeries(); // Detener escucha de datos
+                currentUserId = null;
+                surgeriesCollectionRef = null;
+
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
             }
         });
 
-        async function autoLogin() {
+        // Cambiar a formulario de registro
+        showRegisterBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        });
+
+        // Cambiar a formulario de login
+        showLoginBtn.addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // Manejar Registro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            registerError.classList.add('hidden');
+
             try {
-                // Intenta iniciar sesión primero
-                await signInWithEmailAndPassword(auth, FIXED_USER_EMAIL, FIXED_USER_PASSWORD);
+                await createUserWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged se encargará del resto
             } catch (error) {
-                // Si el usuario no existe, lo crea
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                    console.log("Usuario fijo no encontrado, creando uno nuevo...");
-                    try {
-                        await createUserWithEmailAndPassword(auth, FIXED_USER_EMAIL, FIXED_USER_PASSWORD);
-                    } catch (creationError) {
-                        console.error("Error crítico al crear el usuario fijo:", creationError);
-                        initialLoader.innerHTML = `<p class="text-red-500">Error al crear usuario: ${creationError.message}</p><p class="text-sm text-gray-600 mt-2">Código: ${creationError.code}</p>`;
-                    }
-                } else {
-                    console.error("Error de inicio de sesión automático:", error);
-                    // CAMBIO: Mostrar el error detallado en la pantalla
-                    initialLoader.innerHTML = `<p class="text-red-500">Error de conexión: ${error.message}</p><p class="text-sm text-gray-600 mt-2">Código de error: ${error.code}</p>`;
-                }
+                console.error("Error de registro:", error.message);
+                registerError.textContent = "Error al registrar. La contraseña debe tener al menos 6 caracteres o el email ya está en uso.";
+                registerError.classList.remove('hidden');
             }
-        }
+        });
+
+        // Manejar Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            loginError.classList.add('hidden');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged se encargará del resto
+            } catch (error) {
+                console.error("Error de inicio de sesión:", error.message);
+                loginError.textContent = "Email o contraseña incorrectos.";
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Manejar Logout
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+            }
+        });
 
         // --- LÓGICA DE CÁLCULO ---
         function calculatePriceAndDuration(endTimeString) {
