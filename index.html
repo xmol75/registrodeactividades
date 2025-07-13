@@ -27,6 +27,11 @@
             background-color: #3B82F6; /* bg-blue-600 */
             color: white;
         }
+        /* Estilo para el botón deshabilitado */
+        #save-btn:disabled {
+            background-color: #93C5FD; /* bg-blue-300 */
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -316,6 +321,10 @@
 
         surgeryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = 'Guardando...';
+
             const id = surgeryIdInput.value;
             const { duration, price } = calculatePriceAndDuration(endTimeInput.value);
             
@@ -336,9 +345,12 @@
                 } else {
                     await addDoc(surgeriesCollectionRef, surgeryData);
                 }
-                closeModal();
+                closeModal(); // Cierra el modal al guardar con éxito
             } catch (error) {
                 console.error("Error al guardar:", error);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Guardar';
             }
         });
 
