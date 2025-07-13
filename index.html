@@ -153,13 +153,22 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+        
+        // Tu configuración de Firebase. ¡Ya está puesta!
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7QZGm7xbidXppGQiD1M-Gj4nxkv4PFXs",
+            authDomain: "registro-iq-extras.firebaseapp.com",
+            projectId: "registro-iq-extras",
+            storageBucket: "registro-iq-extras.appspot.com",
+            messagingSenderId: "506336441878",
+            appId: "1:506336441878:web:ffa09208db1844eb2da737",
+            measurementId: "G-WCRG6XQ7GC"
+        };
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -176,21 +185,21 @@
             if (user) {
                 currentUserId = user.uid;
                 console.log("Usuario autenticado:", currentUserId);
-                surgeriesCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/surgeries`);
+                // La ruta de la base de datos ahora es más simple
+                surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
                 listenForData();
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
             } else {
                 console.log("Intentando login anónimo...");
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 } catch (error) {
-                    console.error("Error en login:", error);
-                    document.getElementById('loader').textContent = 'Error de autenticación.';
+                    console.error("Error en login anónimo:", error);
+                    document.getElementById('loader').innerHTML = `
+                        <p class="text-red-500">Error de conexión.</p>
+                        <p class="text-sm text-gray-600 mt-2">Revisa que la configuración de Firebase sea correcta y que hayas añadido tu dominio a la lista de dominios autorizados en Firebase Authentication.</p>
+                    `;
                 }
             }
         });
