@@ -36,23 +36,67 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <!-- Contenedor Principal -->
-    <div id="app-container" class="min-h-screen p-4 sm:p-6 lg:p-8">
+    <!-- Pantalla de Autenticación (Login/Registro) -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <!-- Formulario de Login (visible por defecto) -->
+                <form id="login-form">
+                    <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+                    <div id="login-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="login-email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Entrar</button>
+                    <p class="text-sm text-center mt-4">
+                        ¿No tienes cuenta? <button type="button" id="show-register-btn" class="text-blue-600 hover:underline font-semibold">Regístrate</button>
+                    </p>
+                </form>
+
+                <!-- Formulario de Registro (oculto por defecto) -->
+                <form id="register-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
+                     <div id="register-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="register-email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña (mín. 6 caracteres)</label>
+                        <input type="password" id="register-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Registrarse</button>
+                    <p class="text-sm text-center mt-4">
+                        ¿Ya tienes cuenta? <button type="button" id="show-login-btn" class="text-blue-600 hover:underline font-semibold">Inicia Sesión</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la App (Oculto hasta el login) -->
+    <div id="app-container" class="min-h-screen p-4 sm:p-6 lg:p-8 hidden">
         <div class="max-w-7xl mx-auto">
             
             <!-- Cabecera -->
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">Registro de actividad quirúrgica extra</h1>
-                <p class="text-gray-600 mt-1">Panel de control para tu actividad quirúrgica y cobros.</p>
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Registro de actividad quirúrgica extra</h1>
+                    <p class="text-gray-600 mt-1">Panel de control para tu actividad quirúrgica y cobros.</p>
+                </div>
+                <button id="logout-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Cerrar Sesión
+                </button>
             </header>
 
-            <!-- Indicador de Carga -->
-            <div id="loader" class="text-center py-10">
-                <p>Cargando datos...</p>
-            </div>
-
-            <!-- Contenido de la App (Oculto hasta que se carguen los datos) -->
-            <main id="app-content" class="hidden">
+            <!-- Contenido de la App -->
+            <main id="app-content">
                 <!-- Controles: Filtros y Botón de Añadir -->
                 <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <!-- Filtros -->
@@ -70,7 +114,8 @@
 
                 <!-- Tabla de Registros -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="overflow-x-auto">
+                    <div id="table-loader" class="text-center py-10"><p>Cargando registros...</p></div>
+                    <div id="table-container" class="overflow-x-auto hidden">
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
                                 <tr>
@@ -158,7 +203,13 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
@@ -177,38 +228,106 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        setLogLevel('debug');
-
+        
         let currentUserId = null;
         let surgeriesCollectionRef = null;
         let unsubscribeSurgeries = null;
         let allSurgeries = [];
         let currentFilter = 'all';
 
-        // --- INICIALIZACIÓN Y AUTENTICACIÓN ---
-        onAuthStateChanged(auth, async (user) => {
+        // --- ELEMENTOS DEL DOM ---
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const showRegisterBtn = document.getElementById('show-register-btn');
+        const showLoginBtn = document.getElementById('show-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginError = document.getElementById('login-error');
+        const registerError = document.getElementById('register-error');
+        const tableLoader = document.getElementById('table-loader');
+        const tableContainer = document.getElementById('table-container');
+
+        // --- MANEJO DE AUTENTICACIÓN ---
+        
+        onAuthStateChanged(auth, (user) => {
             if (user) {
+                // Usuario está logueado
                 currentUserId = user.uid;
                 console.log("Usuario autenticado:", currentUserId);
-                // La ruta de la base de datos ahora es más simple
                 surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
+                
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+
                 listenForData();
-                document.getElementById('loader').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
             } else {
-                console.log("Intentando login anónimo...");
-                try {
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    console.error("Error en login anónimo:", error);
-                    document.getElementById('loader').innerHTML = `
-                        <p class="text-red-500">Error de conexión.</p>
-                        <p class="text-sm text-gray-600 mt-2">Revisa que la configuración de Firebase sea correcta y que hayas añadido tu dominio a la lista de dominios autorizados en Firebase Authentication.</p>
-                    `;
-                }
+                // Usuario no está logueado
+                console.log("Usuario no autenticado.");
+                if (unsubscribeSurgeries) unsubscribeSurgeries(); // Detener escucha de datos
+                currentUserId = null;
+                surgeriesCollectionRef = null;
+
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
             }
         });
-        
+
+        // Cambiar a formulario de registro
+        showRegisterBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        });
+
+        // Cambiar a formulario de login
+        showLoginBtn.addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // Manejar Registro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            registerError.classList.add('hidden');
+
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged se encargará del resto
+            } catch (error) {
+                console.error("Error de registro:", error.message);
+                registerError.textContent = "Error al registrar. La contraseña debe tener al menos 6 caracteres o el email ya está en uso.";
+                registerError.classList.remove('hidden');
+            }
+        });
+
+        // Manejar Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            loginError.classList.add('hidden');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged se encargará del resto
+            } catch (error) {
+                console.error("Error de inicio de sesión:", error.message);
+                loginError.textContent = "Email o contraseña incorrectos.";
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        // Manejar Logout
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+            }
+        });
+
         // --- LÓGICA DE CÁLCULO ---
         function calculatePriceAndDuration(endTimeString) {
             if (!endTimeString) {
@@ -219,7 +338,6 @@
             const startTime = new Date(`${baseDate}15:00:00`);
             const endTime = new Date(`${baseDate}${endTimeString}:00`);
 
-            // 1. Calcular Duración
             let durationString = "00:00";
             if (endTime > startTime) {
                 let diffMillis = endTime - startTime;
@@ -229,21 +347,17 @@
                 durationString = `${String(diffHours).padStart(2, '0')}:${String(diffMins).padStart(2, '0')}`;
             }
 
-            // 2. Calcular Precio
             let price = 0;
             const t1730 = new Date(`${baseDate}17:30:00`);
             const t1900 = new Date(`${baseDate}19:00:00`);
             const t2030 = new Date(`${baseDate}20:30:00`);
             const t2200 = new Date(`${baseDate}22:00:00`);
 
-            if (endTime > t1730 && endTime <= t1900) {
-                price = 525;
-            } else if (endTime > t1900 && endTime <= t2030) {
-                price = 725;
-            } else if (endTime > t2030 && endTime <= t2200) {
+            if (endTime > t1730 && endTime <= t1900) price = 525;
+            else if (endTime > t1900 && endTime <= t2030) price = 725;
+            else if (endTime > t2030 && endTime <= t2200) price = 920;
+            else if (endTime > t2200) {
                 price = 920;
-            } else if (endTime > t2200) {
-                price = 920; // Precio base por empezar en el último tramo
                 const extraMillis = endTime - t2200;
                 const extraMinutes = extraMillis / (1000 * 60);
                 const thirtyMinBlocks = Math.ceil(extraMinutes / 30);
@@ -252,7 +366,6 @@
 
             return { duration: durationString, price: price };
         }
-
 
         // --- LÓGICA DEL MODAL ---
         const surgeryModal = document.getElementById('surgery-modal');
@@ -285,7 +398,6 @@
                 surgeryIdInput.value = '';
                 document.getElementById('date').valueAsDate = new Date();
             }
-            // Disparar el cálculo al abrir el modal
             const { duration, price } = calculatePriceAndDuration(endTimeInput.value);
             durationInput.value = duration + ' horas';
             priceInput.value = formatCurrency(price);
@@ -312,11 +424,19 @@
             if (unsubscribeSurgeries) unsubscribeSurgeries();
             if (!surgeriesCollectionRef) return;
 
+            tableLoader.classList.remove('hidden');
+            tableContainer.classList.add('hidden');
+
             const q = query(surgeriesCollectionRef);
             unsubscribeSurgeries = onSnapshot(q, (snapshot) => {
                 allSurgeries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderFilteredSurgeries();
-            }, (error) => console.error("Error al obtener datos:", error));
+                tableLoader.classList.add('hidden');
+                tableContainer.classList.remove('hidden');
+            }, (error) => {
+                console.error("Error al obtener datos:", error);
+                tableLoader.innerHTML = `<p class="text-red-500">Error al cargar los datos.</p>`;
+            });
         }
 
         surgeryForm.addEventListener('submit', async (e) => {
@@ -340,12 +460,9 @@
             };
 
             try {
-                if (id) {
-                    await setDoc(doc(surgeriesCollectionRef, id), surgeryData);
-                } else {
-                    await addDoc(surgeriesCollectionRef, surgeryData);
-                }
-                closeModal(); // Cierra el modal al guardar con éxito
+                if (id) await setDoc(doc(surgeriesCollectionRef, id), surgeryData);
+                else await addDoc(surgeriesCollectionRef, surgeryData);
+                closeModal();
             } catch (error) {
                 console.error("Error al guardar:", error);
             } finally {
@@ -354,13 +471,9 @@
             }
         });
 
-        window.editSurgery = async (id) => {
+        window.editSurgery = (id) => {
             const surgeryToEdit = allSurgeries.find(s => s.id === id);
-            if(surgeryToEdit) {
-                openModal(true, surgeryToEdit);
-            } else {
-                 console.error("Error al editar: No se encontró el registro.");
-            }
+            if(surgeryToEdit) openModal(true, surgeryToEdit);
         };
 
         window.deleteSurgery = async (id) => {
@@ -384,14 +497,7 @@
 
         // --- RENDERIZADO Y FILTROS ---
         function renderFilteredSurgeries() {
-            let filtered = [];
-            if (currentFilter === 'paid') {
-                filtered = allSurgeries.filter(s => s.isPaid);
-            } else if (currentFilter === 'pending') {
-                filtered = allSurgeries.filter(s => !s.isPaid);
-            } else {
-                filtered = allSurgeries;
-            }
+            let filtered = allSurgeries.filter(s => currentFilter === 'all' || (currentFilter === 'paid' && s.isPaid) || (currentFilter === 'pending' && !s.isPaid));
             renderTable(filtered);
         }
 
@@ -402,14 +508,12 @@
 
             if (surgeries.length === 0) {
                 noMsg.classList.remove('hidden');
-                noMsg.textContent = currentFilter === 'all' 
-                    ? 'No hay registros. ¡Añade el primero!' 
-                    : `No hay registros ${currentFilter === 'paid' ? 'cobrados' : 'pendientes'}.`;
+                noMsg.textContent = currentFilter === 'all' ? 'No hay registros. ¡Añade el primero!' : `No hay registros ${currentFilter === 'paid' ? 'cobrados' : 'pendientes'}.`;
             } else {
                 noMsg.classList.add('hidden');
                 surgeries.sort((a, b) => new Date(b.date + 'T' + b.endTime) - new Date(a.date + 'T' + a.endTime));
                 surgeries.forEach(s => {
-                    const row = `
+                    tableBody.innerHTML += `
                         <tr class="border-b hover:bg-gray-50">
                             <td class="px-6 py-4">${formatDate(s.date)}</td>
                             <td class="px-6 py-4 font-medium text-gray-900">${s.nhc}</td>
@@ -435,7 +539,6 @@
                             </td>
                         </tr>
                     `;
-                    tableBody.innerHTML += row;
                 });
             }
         }
