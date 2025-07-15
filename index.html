@@ -119,15 +119,15 @@
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3">Fecha</th>
-                                    <th scope="col" class="px-6 py-3">NHC</th>
-                                    <th scope="col" class="px-6 py-3">Cirugía</th>
-                                    <th scope="col" class="px-6 py-3">Hora Fin</th>
-                                    <th scope="col" class="px-6 py-3">Duración</th>
-                                    <th scope="col" class="px-6 py-3">Precio</th>
-                                    <th scope="col" class="px-6 py-3">Comentarios</th>
-                                    <th scope="col" class="px-6 py-3 text-center">Cobrado</th>
-                                    <th scope="col" class="px-6 py-3 text-center">Acciones</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Fecha</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">NHC</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Cirugía</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Hora Fin</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Duración</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Precio</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Comentarios</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Cobrado</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="surgeries-table-body">
@@ -527,17 +527,17 @@
                 noMsg.textContent = currentFilter === 'all' ? 'No hay registros. ¡Añade el primero!' : `No hay registros ${currentFilter === 'paid' ? 'cobrados' : 'pendientes'}.`;
             } else {
                 noMsg.classList.add('hidden');
-                // CORRECCIÓN: Ordenar por fecha ascendente (más antiguo primero)
+                // Ordenar por fecha ascendente (más antiguo primero)
                 surgeries.sort((a, b) => new Date(a.date + 'T' + a.endTime) - new Date(b.date + 'T' + b.endTime));
                 surgeries.forEach(s => {
                     tableBody.innerHTML += `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-6 py-4">${formatDate(s.date)}</td>
-                            <td class="px-6 py-4 font-medium text-gray-900">${s.nhc}</td>
-                            <td class="px-6 py-4">${s.surgery}</td>
-                            <td class="px-6 py-4">${s.endTime}</td>
-                            <td class="px-6 py-4">${s.duration || 'N/A'}</td>
-                            <td class="px-6 py-4 font-semibold">${formatCurrency(s.price)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${formatDate(s.date)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${s.nhc}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${s.surgery}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${s.endTime}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${s.duration || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-semibold">${formatCurrency(s.price)}</td>
                             <td class="px-6 py-4 text-xs max-w-xs truncate" title="${s.comments}">${s.comments}</td>
                             <td class="px-6 py-4 text-center">
                                 <button onclick="togglePaidStatus('${s.id}', ${s.isPaid})" class="p-1 rounded-full transition-colors duration-200 ${s.isPaid ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}">
