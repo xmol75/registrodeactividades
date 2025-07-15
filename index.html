@@ -44,6 +44,7 @@
                 <form id="login-form">
                     <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
                     <div id="login-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div id="login-success" class="text-green-500 text-sm mb-4 text-center hidden"></div>
                     <div class="mb-4">
                         <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input type="email" id="login-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -53,9 +54,12 @@
                         <input type="password" id="login-password" autocomplete="current-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                     <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Entrar</button>
-                    <p class="text-sm text-center mt-4">
-                        ¿No tienes cuenta? <button type="button" id="show-register-btn" class="text-blue-600 hover:underline font-semibold">Regístrate</button>
-                    </p>
+                    <div class="text-sm text-center mt-4 flex justify-between">
+                        <button type="button" id="show-forgot-password-btn" class="text-gray-500 hover:underline text-xs">¿Has olvidado tu contraseña?</button>
+                        <p>
+                            ¿No tienes cuenta? <button type="button" id="show-register-btn" class="text-blue-600 hover:underline font-semibold">Regístrate</button>
+                        </p>
+                    </div>
                 </form>
 
                 <!-- Formulario de Registro (oculto por defecto) -->
@@ -63,16 +67,31 @@
                     <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
                      <div id="register-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
                     <div class="mb-4">
-                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email Corporativo (@ssib.es)</label>
                         <input type="email" id="register-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                     <div class="mb-6">
-                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña (mín. 6 caracteres)</label>
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
                         <input type="password" id="register-password" autocomplete="new-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <p class="text-xs text-gray-500 mt-1">Debe contener una mayúscula, un número y un carácter especial (@$!%*?&).</p>
                     </div>
                     <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Registrarse</button>
                     <p class="text-sm text-center mt-4">
                         ¿Ya tienes cuenta? <button type="button" id="show-login-btn" class="text-blue-600 hover:underline font-semibold">Inicia Sesión</button>
+                    </p>
+                </form>
+
+                <!-- Formulario de Recuperar Contraseña (oculto por defecto) -->
+                <form id="forgot-password-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mb-6">Recuperar Contraseña</h2>
+                    <p class="text-sm text-center text-gray-600 mb-4">Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+                    <div class="mb-4">
+                        <label for="forgot-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="forgot-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Enviar enlace</button>
+                    <p class="text-sm text-center mt-4">
+                        <button type="button" id="back-to-login-btn" class="text-blue-600 hover:underline font-semibold">Volver a Inicio de Sesión</button>
                     </p>
                 </form>
             </div>
@@ -119,6 +138,7 @@
                         <table class="w-full text-sm text-left text-gray-600">
                             <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
                                 <tr>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Cobrado</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">Fecha</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">NHC</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">Cirugía</th>
@@ -126,7 +146,6 @@
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">Duración</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">Precio</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap">Comentarios</th>
-                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Cobrado</th>
                                     <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -210,9 +229,11 @@
             signInWithEmailAndPassword,
             signOut,
             setPersistence,
-            browserSessionPersistence
+            browserSessionPersistence,
+            sendEmailVerification,
+            sendPasswordResetEmail
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
         
@@ -241,10 +262,14 @@
         const appContainer = document.getElementById('app-container');
         const loginForm = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
         const showRegisterBtn = document.getElementById('show-register-btn');
         const showLoginBtn = document.getElementById('show-login-btn');
+        const showForgotPasswordBtn = document.getElementById('show-forgot-password-btn');
+        const backToLoginBtn = document.getElementById('back-to-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const loginError = document.getElementById('login-error');
+        const loginSuccess = document.getElementById('login-success');
         const registerError = document.getElementById('register-error');
         const tableLoader = document.getElementById('table-loader');
         const tableContainer = document.getElementById('table-container');
@@ -253,133 +278,162 @@
         
         function initializeAuthListener() {
             onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    // Usuario está logueado
+                if (user && user.emailVerified) {
                     currentUserId = user.uid;
-                    console.log("Usuario autenticado:", currentUserId);
                     surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
-                    
                     authContainer.classList.add('hidden');
                     appContainer.classList.remove('hidden');
-
                     listenForData();
                 } else {
-                    // Usuario no está logueado
-                    console.log("Usuario no autenticado.");
-                    if (unsubscribeSurgeries) unsubscribeSurgeries(); // Detener escucha de datos
+                    if (unsubscribeSurgeries) unsubscribeSurgeries();
                     currentUserId = null;
                     surgeriesCollectionRef = null;
-
                     authContainer.classList.remove('hidden');
                     appContainer.classList.add('hidden');
+                    if (user && !user.emailVerified) {
+                        showLoginMessage("Por favor, verifica tu email para poder iniciar sesión. Revisa tu bandeja de entrada.", "error");
+                    }
                 }
             });
         }
 
-        // Establecer la persistencia de la sesión antes de inicializar el listener
         setPersistence(auth, browserSessionPersistence)
-            .then(() => {
-                // Una vez establecida la persistencia, inicializar el listener de autenticación
-                initializeAuthListener();
-            })
+            .then(initializeAuthListener)
             .catch((error) => {
                 console.error("Error al establecer la persistencia:", error);
-                // En caso de error, inicializar de todas formas
                 initializeAuthListener();
             });
 
-
-        // Cambiar a formulario de registro
+        // --- NAVEGACIÓN ENTRE FORMULARIOS DE AUTH ---
         showRegisterBtn.addEventListener('click', () => {
             loginForm.classList.add('hidden');
+            forgotPasswordForm.classList.add('hidden');
             registerForm.classList.remove('hidden');
         });
 
-        // Cambiar a formulario de login
         showLoginBtn.addEventListener('click', () => {
             registerForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
+        
+        showForgotPasswordBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            forgotPasswordForm.classList.remove('hidden');
+        });
 
-        // Manejar Registro
+        backToLoginBtn.addEventListener('click', () => {
+            forgotPasswordForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // --- LÓGICA DE FORMULARIOS DE AUTH ---
+
+        function showLoginMessage(message, type = 'error') {
+            const element = type === 'error' ? loginError : loginSuccess;
+            const otherElement = type === 'error' ? loginSuccess : loginError;
+            element.textContent = message;
+            element.classList.remove('hidden');
+            otherElement.classList.add('hidden');
+        }
+
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             registerError.classList.add('hidden');
 
+            if (!email.endsWith('@ssib.es')) {
+                registerError.textContent = "El email debe ser corporativo (@ssib.es).";
+                registerError.classList.remove('hidden');
+                return;
+            }
+
+            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+            if (!passwordRegex.test(password)) {
+                registerError.textContent = "La contraseña no cumple los requisitos de seguridad.";
+                registerError.classList.remove('hidden');
+                return;
+            }
+
             try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged se encargará del resto
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await sendEmailVerification(userCredential.user);
+                await signOut(auth); // Desloguear para forzar verificación
+                showLoginMessage("¡Registro completado! Revisa tu email para verificar tu cuenta antes de iniciar sesión.", "success");
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
             } catch (error) {
                 console.error("Error de registro:", error.message);
-                registerError.textContent = "Error al registrar. La contraseña debe tener al menos 6 caracteres o el email ya está en uso.";
+                registerError.textContent = "Este email ya está en uso.";
                 registerError.classList.remove('hidden');
             }
         });
 
-        // Manejar Login
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-            loginError.classList.add('hidden');
+            showLoginMessage('', 'error'); // Clear previous messages
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged se encargará del resto
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (!userCredential.user.emailVerified) {
+                    await signOut(auth);
+                    showLoginMessage("Debes verificar tu email para poder entrar. Revisa tu bandeja de entrada.", "error");
+                }
+                // onAuthStateChanged se encargará del resto si está verificado
             } catch (error) {
                 console.error("Error de inicio de sesión:", error.message);
-                loginError.textContent = "Email o contraseña incorrectos.";
-                loginError.classList.remove('hidden');
+                showLoginMessage("Email o contraseña incorrectos.", "error");
             }
         });
 
-        // Manejar Logout
-        logoutBtn.addEventListener('click', async () => {
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+            showLoginMessage('', 'error');
+
             try {
-                await signOut(auth);
+                await sendPasswordResetEmail(auth, email);
+                showLoginMessage("Enlace de recuperación enviado. Revisa tu email.", "success");
+                forgotPasswordForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
             } catch (error) {
-                console.error("Error al cerrar sesión:", error);
+                console.error("Error al enviar email de recuperación:", error);
+                showLoginMessage("No se pudo enviar el email. Verifica la dirección.", "error");
             }
         });
+
+        logoutBtn.addEventListener('click', () => signOut(auth));
 
         // --- LÓGICA DE CÁLCULO ---
         function calculatePriceAndDuration(endTimeString) {
-            if (!endTimeString) {
-                return { duration: "00:00", price: 0 };
-            }
-
+            if (!endTimeString) return { duration: "00:00", price: 0 };
             const baseDate = '1970-01-01T';
             const startTime = new Date(`${baseDate}15:00:00`);
             const endTime = new Date(`${baseDate}${endTimeString}:00`);
-
             let durationString = "00:00";
             if (endTime > startTime) {
                 let diffMillis = endTime - startTime;
-                let diffHours = Math.floor(diffMillis / (1000 * 60 * 60));
-                diffMillis -= diffHours * (1000 * 60 * 60);
-                let diffMins = Math.floor(diffMillis / (1000 * 60));
+                let diffHours = Math.floor(diffMillis / 3600000);
+                diffMillis -= diffHours * 3600000;
+                let diffMins = Math.floor(diffMillis / 60000);
                 durationString = `${String(diffHours).padStart(2, '0')}:${String(diffMins).padStart(2, '0')}`;
             }
-
             let price = 0;
             const t1730 = new Date(`${baseDate}17:30:00`);
             const t1900 = new Date(`${baseDate}19:00:00`);
             const t2030 = new Date(`${baseDate}20:30:00`);
             const t2200 = new Date(`${baseDate}22:00:00`);
-
             if (endTime > t1730 && endTime <= t1900) price = 525;
             else if (endTime > t1900 && endTime <= t2030) price = 725;
             else if (endTime > t2030 && endTime <= t2200) price = 920;
             else if (endTime > t2200) {
                 price = 920;
                 const extraMillis = endTime - t2200;
-                const extraMinutes = extraMillis / (1000 * 60);
-                const thirtyMinBlocks = Math.ceil(extraMinutes / 30);
-                price += thirtyMinBlocks * 70;
+                const extraMinutes = extraMillis / 60000;
+                price += Math.ceil(extraMinutes / 30) * 70;
             }
-
             return { duration: durationString, price: price };
         }
 
@@ -439,10 +493,8 @@
         function listenForData() {
             if (unsubscribeSurgeries) unsubscribeSurgeries();
             if (!surgeriesCollectionRef) return;
-
             tableLoader.classList.remove('hidden');
             tableContainer.classList.add('hidden');
-
             const q = query(surgeriesCollectionRef);
             unsubscribeSurgeries = onSnapshot(q, (snapshot) => {
                 allSurgeries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -460,10 +512,8 @@
             const saveBtn = document.getElementById('save-btn');
             saveBtn.disabled = true;
             saveBtn.innerHTML = 'Guardando...';
-
             const id = surgeryIdInput.value;
             const { duration, price } = calculatePriceAndDuration(endTimeInput.value);
-            
             const surgeryData = {
                 date: document.getElementById('date').value,
                 nhc: document.getElementById('nhc').value,
@@ -474,7 +524,6 @@
                 comments: document.getElementById('comments').value,
                 isPaid: document.getElementById('is-paid').checked,
             };
-
             try {
                 if (id) await setDoc(doc(surgeriesCollectionRef, id), surgeryData);
                 else await addDoc(surgeriesCollectionRef, surgeryData);
@@ -521,17 +570,20 @@
             const tableBody = document.getElementById('surgeries-table-body');
             const noMsg = document.getElementById('no-surgeries-message');
             tableBody.innerHTML = '';
-
             if (surgeries.length === 0) {
                 noMsg.classList.remove('hidden');
                 noMsg.textContent = currentFilter === 'all' ? 'No hay registros. ¡Añade el primero!' : `No hay registros ${currentFilter === 'paid' ? 'cobrados' : 'pendientes'}.`;
             } else {
                 noMsg.classList.add('hidden');
-                // Ordenar por fecha ascendente (más antiguo primero)
                 surgeries.sort((a, b) => new Date(a.date + 'T' + a.endTime) - new Date(b.date + 'T' + b.endTime));
                 surgeries.forEach(s => {
                     tableBody.innerHTML += `
                         <tr class="border-b hover:bg-gray-50">
+                            <td class="px-6 py-4 text-center">
+                                <button onclick="togglePaidStatus('${s.id}', ${s.isPaid})" class="p-1 rounded-full transition-colors duration-200 ${s.isPaid ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${s.isPaid ? '<path d="M20 6 9 17l-5-5"/>' : '<path d="M6 18 18 6M6 6l12 12"/>'}</svg>
+                                </button>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">${formatDate(s.date)}</td>
                             <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${s.nhc}</td>
                             <td class="px-6 py-4 whitespace-nowrap">${s.surgery}</td>
@@ -539,11 +591,6 @@
                             <td class="px-6 py-4 whitespace-nowrap">${s.duration || 'N/A'}</td>
                             <td class="px-6 py-4 whitespace-nowrap font-semibold">${formatCurrency(s.price)}</td>
                             <td class="px-6 py-4 text-xs max-w-xs truncate" title="${s.comments}">${s.comments}</td>
-                            <td class="px-6 py-4 text-center">
-                                <button onclick="togglePaidStatus('${s.id}', ${s.isPaid})" class="p-1 rounded-full transition-colors duration-200 ${s.isPaid ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${s.isPaid ? '<path d="M20 6 9 17l-5-5"/>' : '<path d="M6 18 18 6M6 6l12 12"/>'}</svg>
-                                </button>
-                            </td>
                             <td class="px-6 py-4 text-center">
                                 <div class="flex items-center justify-center space-x-2">
                                     <button onclick="editSurgery('${s.id}')" class="text-blue-600 hover:text-blue-800 p-1">
