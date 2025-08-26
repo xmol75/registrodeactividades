@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS (xlsx) para exportar a Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Icono de la página -->
+    <link rel="icon" href="euro.png" type="image/png">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -342,84 +344,6 @@
         backToLoginBtn.addEventListener('click', () => {
             forgotPasswordForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
-        });
-
-        // --- LÓGICA DE FORMULARIOS DE AUTH ---
-
-        function showLoginMessage(message, type = 'error') {
-            const element = type === 'error' ? loginError : loginSuccess;
-            const otherElement = type === 'error' ? loginSuccess : loginError;
-            element.textContent = message;
-            element.classList.remove('hidden');
-            otherElement.classList.add('hidden');
-        }
-
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            registerError.classList.add('hidden');
-
-            if (!email.endsWith('@ssib.es')) {
-                registerError.textContent = "El email debe ser corporativo (@ssib.es).";
-                registerError.classList.remove('hidden');
-                return;
-            }
-
-            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-            if (!passwordRegex.test(password)) {
-                registerError.textContent = "La contraseña no cumple los requisitos de seguridad.";
-                registerError.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                await sendEmailVerification(userCredential.user);
-                await signOut(auth); // Desloguear para forzar verificación
-                showLoginMessage("¡Registro completado! Revisa tu email para verificar tu cuenta antes de iniciar sesión.", "success");
-                registerForm.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-            } catch (error) {
-                console.error("Error de registro:", error.message);
-                registerError.textContent = "Este email ya está en uso.";
-                registerError.classList.remove('hidden');
-            }
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            showLoginMessage('', 'error'); // Clear previous messages
-
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                if (!userCredential.user.emailVerified) {
-                    await signOut(auth);
-                    showLoginMessage("Debes verificar tu email para poder entrar. Revisa tu bandeja de entrada.", "error");
-                }
-                // onAuthStateChanged se encargará del resto si está verificado
-            } catch (error) {
-                console.error("Error de inicio de sesión:", error.message);
-                showLoginMessage("Email o contraseña incorrectos.", "error");
-            }
-        });
-
-        forgotPasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('forgot-email').value;
-            showLoginMessage('', 'error');
-
-            try {
-                await sendPasswordResetEmail(auth, email);
-                showLoginMessage("Enlace de recuperación enviado. Revisa tu email.", "success");
-                forgotPasswordForm.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-            } catch (error) {
-                console.error("Error al enviar email de recuperación:", error);
-                showLoginMessage("No se pudo enviar el email. Verifica la dirección.", "error");
-            }
         });
 
         logoutBtn.addEventListener('click', () => signOut(auth));
