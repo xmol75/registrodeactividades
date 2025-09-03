@@ -297,6 +297,34 @@
 
         // --- MANEJO DE AUTENTICACIÓN ---
         
+        // --- MANEJADOR DE LOGIN (AÑADIDO) ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            // Ocultar mensajes previos
+            loginError.classList.add('hidden');
+            loginSuccess.classList.add('hidden');
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // Si el email no está verificado, cerrar sesión y mostrar error
+                if (!userCredential.user.emailVerified) {
+                    loginError.textContent = 'Por favor, verifica tu email antes de iniciar sesión.';
+                    loginError.classList.remove('hidden');
+                    await signOut(auth);
+                } else {
+                    // Inicio de sesión exitoso; onAuthStateChanged gestionará la vista
+                    loginSuccess.textContent = 'Acceso exitoso.';
+                    loginSuccess.classList.remove('hidden');
+                }
+            } catch (error) {
+                // Mensaje genérico; puedes mostrar detalles con error.code si quieres
+                loginError.textContent = 'Email o contraseña incorrectos.';
+                loginError.classList.remove('hidden');
+                console.error('Error en signInWithEmailAndPassword:', error);
+            }
+        });
+
         function initializeAuthListener() {
             onAuthStateChanged(auth, (user) => {
                 if (user && user.emailVerified) {
