@@ -297,7 +297,7 @@
 
         // --- MANEJO DE AUTENTICACIÓN ---
         
-        // --- MANEJADOR DE LOGIN (AÑADIDO) ---
+        // --- MANEJADOR DE LOGIN ---
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
@@ -322,6 +322,69 @@
                 loginError.textContent = 'Email o contraseña incorrectos.';
                 loginError.classList.remove('hidden');
                 console.error('Error en signInWithEmailAndPassword:', error);
+            }
+        });
+
+        // --- FUNCION PARA MOSTRAR MENSAJES (USADA EN VARIOS LUGARES) ---
+        function showLoginMessage(message, type = 'success') {
+            // type = 'success' | 'error'
+            if (type === 'error') {
+                loginSuccess.classList.add('hidden');
+                loginError.textContent = message;
+                loginError.classList.remove('hidden');
+            } else {
+                loginError.classList.add('hidden');
+                loginSuccess.textContent = message;
+                loginSuccess.classList.remove('hidden');
+            }
+            setTimeout(() => {
+                loginError.classList.add('hidden');
+                loginSuccess.classList.add('hidden');
+            }, 6000);
+        }
+
+        // --- HANDLER PARA REGISTRO ---
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerError.classList.add('hidden');
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value;
+
+            // Validar dominio corporativo (opcional, según tu comentario en UI)
+            if (!email.endsWith('@ssib.es')) {
+                registerError.textContent = 'Usa tu email corporativo @ssib.es';
+                registerError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await sendEmailVerification(userCredential.user);
+                showLoginMessage('Cuenta creada. Revisa tu email y confirma la verificación antes de iniciar sesión.', 'success');
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                // cerrar sesión por seguridad para forzar verificación
+                await signOut(auth);
+            } catch (err) {
+                console.error('Error en registro:', err);
+                // Puedes mapear err.code a mensajes más amigables si quieres
+                registerError.textContent = err.message || 'Error al crear la cuenta.';
+                registerError.classList.remove('hidden');
+            }
+        });
+
+        // --- HANDLER PARA RECUPERAR CONTRASEÑA ---
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showLoginMessage('Enlace de restablecimiento enviado. Revisa tu bandeja de entrada.', 'success');
+                forgotPasswordForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            } catch (err) {
+                console.error('Error enviando enlace de recuperación:', err);
+                showLoginMessage(err.message || 'No se pudo enviar el enlace.', 'error');
             }
         });
 
