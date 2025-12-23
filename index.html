@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de actividad quirúrgica extra</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS (xlsx) para exportar a Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Icono de la página y para iPhone -->
+    <link rel="icon" href="pico.png" type="image/png">
+    <link rel="apple-touch-icon" href="pico.png">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilos para el scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Clases para la transición del modal */
+        .modal-hidden { display: none; opacity: 0; }
+        .modal-visible { display: flex; opacity: 1; }
+        /* Estilo para el botón de filtro activo */
+        .filter-btn-active {
+            background-color: #3B82F6; /* bg-blue-600 */
+            color: white;
+        }
+        /* Estilo para el botón deshabilitado */
+        #save-btn:disabled {
+            background-color: #93C5FD; /* bg-blue-300 */
+            cursor: not-allowed;
+        }
+        /* Spinner de carga */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .loading-overlay.hidden {
+            display: none;
+        }
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10B981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast.error {
+            background: #EF4444;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p class="text-white mt-4 text-lg">Cargando...</p>
+    </div>
+
+    <!-- Pantalla de Autenticación (Login/Registro) -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <!-- Formulario de Login (visible por defecto) -->
+                <form id="login-form">
+                    <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+                    <div id="login-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div id="login-success" class="text-green-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="login-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6 relative">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" autocomplete="current-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <button type="button" aria-label="Mostrar/ocultar contraseña" class="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-gray-500" onclick="togglePasswordVisibility('login-password')">
+                            <svg class="h-5 w-5" id="eye-icon-login-password" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="h-5 w-5 hidden" id="eye-off-icon-login-password" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                        </button>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Entrar</button>
+                    <div class="text-sm text-center mt-4 flex justify-between">
+                        <button type="button" id="show-forgot-password-btn" class="text-gray-500 hover:underline text-xs">¿Has olvidado tu contraseña?</button>
+                        <p>
+                            ¿No tienes cuenta? <button type="button" id="show-register-btn" class="text-blue-600 hover:underline font-semibold">Regístrate</button>
+                        </p>
+                    </div>
+                </form>
+
+                <!-- Formulario de Registro (oculto por defecto) -->
+                <form id="register-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
+                     <div id="register-error" class="text-red-500 text-sm mb-4 text-center hidden"></div>
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Email Corporativo (@ssib.es)</label>
+                        <input type="email" id="register-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div class="mb-6 relative">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="register-password" autocomplete="new-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <button type="button" aria-label="Mostrar/ocultar contraseña" class="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-gray-500" onclick="togglePasswordVisibility('register-password')">
+                            <svg class="h-5 w-5" id="eye-icon-register-password" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="h-5 w-5 hidden" id="eye-off-icon-register-password" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                        </button>
+                        <p class="text-xs text-gray-500 mt-1">Debe contener una mayúscula, un número y un carácter especial (@$!%*?&).</p>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Registrarse</button>
+                    <p class="text-sm text-center mt-4">
+                        ¿Ya tienes cuenta? <button type="button" id="show-login-btn" class="text-blue-600 hover:underline font-semibold">Inicia Sesión</button>
+                    </p>
+                </form>
+
+                <!-- Formulario de Recuperar Contraseña (oculto por defecto) -->
+                <form id="forgot-password-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mb-6">Recuperar Contraseña</h2>
+                    <p class="text-sm text-center text-gray-600 mb-4">Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+                    <div class="mb-4">
+                        <label for="forgot-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="forgot-email" autocomplete="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Enviar enlace</button>
+                    <p class="text-sm text-center mt-4">
+                        <button type="button" id="back-to-login-btn" class="text-blue-600 hover:underline font-semibold">Volver a Inicio de Sesión</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la App (Oculto hasta el login) -->
+    <div id="app-container" class="min-h-screen p-4 sm:p-6 lg:p-8 hidden">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Cabecera -->
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Registro de actividad quirúrgica extra</h1>
+                    <p class="text-gray-600 mt-1">Panel de control para tu actividad quirúrgica y cobros.</p>
+                    <!-- Panel de estadísticas -->
+                    <div id="stats-panel" class="mt-4 flex gap-4 text-sm">
+                        <div class="bg-blue-50 px-3 py-2 rounded-lg">
+                            <span class="font-semibold text-blue-700">Total registros:</span>
+                            <span id="stat-total" class="ml-1 text-blue-900 font-bold">0</span>
+                        </div>
+                        <div class="bg-green-50 px-3 py-2 rounded-lg">
+                            <span class="font-semibold text-green-700">Cobrados:</span>
+                            <span id="stat-paid" class="ml-1 text-green-900 font-bold">0</span>
+                        </div>
+                        <div class="bg-yellow-50 px-3 py-2 rounded-lg">
+                            <span class="font-semibold text-yellow-700">Pendientes:</span>
+                            <span id="stat-pending" class="ml-1 text-yellow-900 font-bold">0</span>
+                        </div>
+                        <div class="bg-purple-50 px-3 py-2 rounded-lg">
+                            <span class="font-semibold text-purple-700">Total €:</span>
+                            <span id="stat-amount" class="ml-1 text-purple-900 font-bold">0 €</span>
+                        </div>
+                    </div>
+                </div>
+                <button id="logout-btn" aria-label="Cerrar sesión" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-600 transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Cerrar Sesión
+                </button>
+            </header>
+
+            <!-- Contenido de la App -->
+            <main id="app-content">
+                <!-- Controles: Filtros y Botón de Añadir -->
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                    <!-- Filtros -->
+                    <div id="filter-controls" class="flex items-center bg-gray-200 rounded-lg p-1">
+                        <button data-filter="all" class="filter-btn filter-btn-active px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-200">Todos</button>
+                        <button data-filter="pending" class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-200">Pendientes</button>
+                        <button data-filter="paid" class="filter-btn px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-200">Cobrados</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Botón Exportar -->
+                        <button id="export-excel-btn" aria-label="Exportar registros a Excel" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-200 flex items-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Exportar a Excel
+                        </button>
+                        <!-- Botón Añadir -->
+                        <button id="add-surgery-btn" aria-label="Añadir nuevo registro quirúrgico" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-200 flex items-center w-full sm:w-auto justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Añadir Registro
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mostrar límite de registros -->
+                <div id="records-limit-notice" class="hidden mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
+                    <p class="text-sm">📊 Mostrando los primeros <strong>100 registros</strong> por rendimiento. Total: <span id="total-records-count">0</span></p>
+                </div>
+
+                <!-- Tabla de Registros -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div id="table-loader" class="text-center py-10"><p>Cargando registros...</p></div>
+                    <div id="table-container" class="overflow-x-auto hidden">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="bg-gray-100 text-xs text-gray-700 uppercase">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Cobrado</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Fecha</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">NHC</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Cirugía</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Hora Fin</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Duración</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Precio</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap">Comentarios</th>
+                                    <th scope="col" class="px-6 py-3 whitespace-nowrap text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="surgeries-table-body">
+                                <!-- Filas generadas por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                     <div id="no-surgeries-message" class="text-center py-10 text-gray-500 hidden">
+                        <p>No hay registros. ¡Añade el primero!</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para Añadir/Editar Registro -->
+    <div id="surgery-modal" class="modal-hidden fixed inset-0 bg-gray-900 bg-opacity-50 items-center justify-center transition-opacity duration-300 z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 transform transition-transform duration-300 scale-95 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+                <h2 id="modal-title" class="text-xl font-bold">Añadir Nuevo Registro</h2>
+                <button id="close-modal-btn" aria-label="Cerrar modal" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <form id="surgery-form" class="p-6 space-y-4">
+                <input type="hidden" id="surgery-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-700">Fecha *</label>
+                        <input type="date" id="date" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="nhc" class="block text-sm font-medium text-gray-700">NHC (Nº Historia Clínica) *</label>
+                        <input type="text" id="nhc" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                </div>
+                <div>
+                    <label for="surgery" class="block text-sm font-medium text-gray-700">Cirugía *</label>
+                    <input type="text" id="surgery" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="end-time" class="block text-sm font-medium text-gray-700">Hora de fin *</label>
+                        <input type="time" id="end-time" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="duration" class="block text-sm font-medium text-gray-700">Duración</label>
+                        <input type="text" id="duration" class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm" readonly>
+                    </div>
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700">Precio</label>
+                        <input type="text" id="price" class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm" readonly>
+                    </div>
+                </div>
+                <div>
+                    <label for="comments" class="block text-sm font-medium text-gray-700">Comentarios</label>
+                    <textarea id="comments" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="is-paid" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-700">Marcado como cobrado</span>
+                    </label>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="button" id="cancel-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg mr-2 hover:bg-gray-300 transition duration-200">Cancelar</button>
+                    <button type="submit" id="save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-200">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
+            setPersistence,
+            browserSessionPersistence,
+            sendEmailVerification,
+            sendPasswordResetEmail
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7QZGm7xbidXppGQiD1M-Gj4nxkv4PFXs",
+            authDomain: "registro-iq-extras.firebaseapp.com",
+            projectId: "registro-iq-extras",
+            storageBucket: "registro-iq-extras.appspot.com",
+            messagingSenderId: "506336441878",
+            appId: "1:506336441878:web:ffa09208db1844eb2da737",
+            measurementId: "G-WCRG6XQ7GC"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let currentUserId = null;
+        let surgeriesCollectionRef = null;
+        let unsubscribeSurgeries = null;
+        let allSurgeries = [];
+        let currentFilter = 'all';
+
+        // --- ELEMENTOS DEL DOM ---
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        const showRegisterBtn = document.getElementById('show-register-btn');
+        const showLoginBtn = document.getElementById('show-login-btn');
+        const showForgotPasswordBtn = document.getElementById('show-forgot-password-btn');
+        const backToLoginBtn = document.getElementById('back-to-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginError = document.getElementById('login-error');
+        const loginSuccess = document.getElementById('login-success');
+        const registerError = document.getElementById('register-error');
+        const tableLoader = document.getElementById('table-loader');
+        const tableContainer = document.getElementById('table-container');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        // --- FUNCIONES DE LOADING ---
+        function showLoading(message = 'Cargando...') {
+            loadingOverlay.querySelector('p').textContent = message;
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        // --- FUNCIONES DE TOAST ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // --- MANEJO DE AUTENTICACIÓN ---
+        
+        // --- MANEJADOR DE LOGIN ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            loginError.classList.add('hidden');
+            loginSuccess.classList.add('hidden');
+            
+            showLoading('Iniciando sesión...');
+            
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (!userCredential.user.emailVerified) {
+                    loginError.textContent = 'Por favor, verifica tu email antes de iniciar sesión.';
+                    loginError.classList.remove('hidden');
+                    await signOut(auth);
+                    hideLoading();
+                } else {
+                    loginSuccess.textContent = 'Acceso exitoso.';
+                    loginSuccess.classList.remove('hidden');
+                    showToast('¡Bienvenido!', 'success');
+                    hideLoading();
+                }
+            } catch (error) {
+                loginError.textContent = 'Email o contraseña incorrectos.';
+                loginError.classList.remove('hidden');
+                console.error('Error en signInWithEmailAndPassword:', error);
+                hideLoading();
+                showToast('Error al iniciar sesión', 'error');
+            }
+        });
+
+        // --- FUNCION PARA MOSTRAR MENSAJES (USADA EN VARIOS LUGARES) ---
+        function showLoginMessage(message, type = 'success') {
+            if (type === 'error') {
+                loginSuccess.classList.add('hidden');
+                loginError.textContent = message;
+                loginError.classList.remove('hidden');
+            } else {
+                loginError.classList.add('hidden');
+                loginSuccess.textContent = message;
+                loginSuccess.classList.remove('hidden');
+            }
+            setTimeout(() => {
+                loginError.classList.add('hidden');
+                loginSuccess.classList.add('hidden');
+            }, 6000);
+        }
+
+        // --- HANDLER PARA REGISTRO ---
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerError.classList.add('hidden');
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value;
+
+            // Validar dominio corporativo
+            if (!email.endsWith('@ssib.es')) {
+                registerError.textContent = 'Usa tu email corporativo @ssib.es';
+                registerError.classList.remove('hidden');
+                showToast('Dominio de email inválido', 'error');
+                return;
+            }
+
+            showLoading('Creando cuenta...');
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await sendEmailVerification(userCredential.user);
+                showLoginMessage('Cuenta creada. Revisa tu email y confirma la verificación antes de iniciar sesión.', 'success');
+                showToast('Cuenta creada exitosamente', 'success');
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                await signOut(auth);
+                hideLoading();
+            } catch (err) {
+                console.error('Error en registro:', err);
+                registerError.textContent = err.message || 'Error al crear la cuenta.';
+                registerError.classList.remove('hidden');
+                showToast('Error al registrar la cuenta', 'error');
+                hideLoading();
+            }
+        });
+
+        // --- HANDLER PARA RECUPERAR CONTRASEÑA ---
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            
+            showLoading('Enviando enlace...');
+            
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showLoginMessage('Enlace de restablecimiento enviado. Revisa tu bandeja de entrada.', 'success');
+                showToast('Enlace enviado correctamente', 'success');
+                forgotPasswordForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                hideLoading();
+            } catch (err) {
+                console.error('Error enviando enlace de recuperación:', err);
+                showLoginMessage(err.message || 'No se pudo enviar el enlace.', 'error');
+                showToast('Error al enviar el enlace', 'error');
+                hideLoading();
+            }
+        });
+
+        function initializeAuthListener() {
+            onAuthStateChanged(auth, (user) => {
+                if (user && user.emailVerified) {
+                    currentUserId = user.uid;
+                    surgeriesCollectionRef = collection(db, `surgeries/${currentUserId}/records`);
+                    authContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    listenForData();
+                } else {
+                    if (unsubscribeSurgeries) unsubscribeSurgeries();
+                    currentUserId = null;
+                    surgeriesCollectionRef = null;
+                    authContainer.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                    if (user && !user.emailVerified) {
+                        showLoginMessage("Por favor, verifica tu email para poder iniciar sesión. Revisa tu bandeja de entrada.", "error");
+                    }
+                }
+            });
+        }
+
+        setPersistence(auth, browserSessionPersistence)
+            .then(initializeAuthListener)
+            .catch((error) => {
+                console.error("Error al establecer la persistencia:", error);
+                initializeAuthListener();
+            });
+
+        // --- NAVEGACIÓN ENTRE FORMULARIOS DE AUTH ---
+        showRegisterBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            forgotPasswordForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        });
+
+        showLoginBtn.addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+        
+        showForgotPasswordBtn.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            forgotPasswordForm.classList.remove('hidden');
+        });
+
+        backToLoginBtn.addEventListener('click', () => {
+            forgotPasswordForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+
+        // Confirmación al cerrar sesión
+        logoutBtn.addEventListener('click', async () => {
+            const confirmed = await showConfirmation("¿Seguro que quieres cerrar sesión?");
+            if (confirmed) {
+                showLoading('Cerrando sesión...');
+                await signOut(auth);
+                showToast('Sesión cerrada', 'success');
+                hideLoading();
+            }
+        });
+
+        // --- LÓGICA DE CÁLCULO CORREGIDA PARA CIRUGÍAS QUE CRUZAN MEDIANOCHE ---
+        function calculatePriceAndDuration(dateStr, endTimeString) {
+            if (!endTimeString || !dateStr) return { duration: "00:00", price: 0 };
+            
+            // Crear objetos Date con la fecha proporcionada
+            const surgeryDate = new Date(dateStr + 'T00:00:00');
+            const startTime = new Date(dateStr + 'T15:00:00');
+            let endTime = new Date(dateStr + 'T' + endTimeString + ':00');
+            
+            // Si la hora de fin es menor o igual a 15:00, asumimos que cruzó medianoche
+            if (endTime <= startTime) {
+                // Añadir un día a la hora de fin
+                endTime = new Date(endTime.getTime() + 24 * 60 * 60 * 1000);
+            }
+            
+            // Calcular duración
+            let durationString = "00:00";
+            if (endTime > startTime) {
+                let diffMillis = endTime - startTime;
+                let diffHours = Math.floor(diffMillis / 3600000);
+                diffMillis -= diffHours * 3600000;
+                let diffMins = Math.floor(diffMillis / 60000);
+                durationString = `${String(diffHours).padStart(2, '0')}:${String(diffMins).padStart(2, '0')}`;
+            }
+            
+            // Calcular precio basándose en umbrales
+            let price = 0;
+            const t1730 = new Date(dateStr + 'T17:30:00');
+            const t1900 = new Date(dateStr + 'T19:00:00');
+            const t2030 = new Date(dateStr + 'T20:30:00');
+            const t2200 = new Date(dateStr + 'T22:00:00');
+            
+            // Ajustar umbrales si cruzaron medianoche
+            if (endTime.getDate() !== startTime.getDate()) {
+                // La cirugía cruzó medianoche, ajustar umbrales del segundo día
+                const nextDay = new Date(surgeryDate.getTime() + 24 * 60 * 60 * 1000);
+                const nextDayStr = nextDay.toISOString().split('T')[0];
+                
+                // Usar la hora de fin con la fecha correcta del día siguiente
+                if (endTime > t1730 && endTime <= t1900) price = 525;
+                else if (endTime > t1900 && endTime <= t2030) price = 725;
+                else if (endTime > t2030 && endTime <= t2200) price = 920;
+                else if (endTime > t2200) {
+                    price = 920;
+                    const extraMillis = endTime - t2200;
+                    const extraMinutes = extraMillis / 60000;
+                    price += Math.ceil(extraMinutes / 30) * 70;
+                }
+            } else {
+                // Lógica normal cuando no cruza medianoche
+                if (endTime > t1730 && endTime <= t1900) price = 525;
+                else if (endTime > t1900 && endTime <= t2030) price = 725;
+                else if (endTime > t2030 && endTime <= t2200) price = 920;
+                else if (endTime > t2200) {
+                    price = 920;
+                    const extraMillis = endTime - t2200;
+                    const extraMinutes = extraMillis / 60000;
+                    price += Math.ceil(extraMinutes / 30) * 70;
+                }
+            }
+            
+            return { duration: durationString, price: price };
+        }
+
+        // --- LÓGICA DEL MODAL ---
+        const surgeryModal = document.getElementById('surgery-modal');
+        const surgeryForm = document.getElementById('surgery-form');
+        const modalTitle = document.getElementById('modal-title');
+        const surgeryIdInput = document.getElementById('surgery-id');
+        const dateInput = document.getElementById('date');
+        const endTimeInput = document.getElementById('end-time');
+        const durationInput = document.getElementById('duration');
+        const priceInput = document.getElementById('price');
+
+        // Actualizar cálculos cuando cambie la hora de fin O la fecha
+        function updateCalculations() {
+            const { duration, price } = calculatePriceAndDuration(dateInput.value, endTimeInput.value);
+            durationInput.value = duration + ' horas';
+            priceInput.value = formatCurrency(price);
+        }
+
+        endTimeInput.addEventListener('input', updateCalculations);
+        dateInput.addEventListener('change', updateCalculations);
+
+        const openModal = (isEditing = false, surgery = null) => {
+            surgeryForm.reset();
+            if (isEditing && surgery) {
+                modalTitle.textContent = 'Editar Registro';
+                surgeryIdInput.value = surgery.id;
+                dateInput.value = surgery.date;
+                document.getElementById('nhc').value = surgery.nhc;
+                document.getElementById('surgery').value = surgery.surgery;
+                endTimeInput.value = surgery.endTime;
+                document.getElementById('comments').value = surgery.comments;
+                document.getElementById('is-paid').checked = surgery.isPaid;
+            } else {
+                modalTitle.textContent = 'Añadir Nuevo Registro';
+                surgeryIdInput.value = '';
+                dateInput.valueAsDate = new Date();
+            }
+            updateCalculations();
+            
+            surgeryModal.classList.remove('modal-hidden');
+            surgeryModal.classList.add('modal-visible');
+            setTimeout(() => surgeryModal.querySelector('div').classList.remove('scale-95'), 10);
+        };
+
+        const closeModal = () => {
+            surgeryModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                surgeryModal.classList.add('modal-hidden');
+                surgeryModal.classList.remove('modal-visible');
+            }, 300);
+        };
+
+        document.getElementById('add-surgery-btn').addEventListener('click', () => openModal(false));
+        document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+        document.getElementById('cancel-btn').addEventListener('click', closeModal);
+
+        // --- LÓGICA DE DATOS (FIRESTORE) ---
+        function listenForData() {
+            if (unsubscribeSurgeries) unsubscribeSurgeries();
+            if (!surgeriesCollectionRef) return;
+            tableLoader.classList.remove('hidden');
+            tableContainer.classList.add('hidden');
+            
+            showLoading('Cargando datos...');
+            
+            const q = query(surgeriesCollectionRef);
+            unsubscribeSurgeries = onSnapshot(q, (snapshot) => {
+                allSurgeries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateStatistics();
+                renderFilteredSurgeries();
+                tableLoader.classList.add('hidden');
+                tableContainer.classList.remove('hidden');
+                hideLoading();
+            }, (error) => {
+                console.error("Error al obtener datos:", error);
+                tableLoader.innerHTML = `<p class="text-red-500">Error al cargar los datos.</p>`;
+                showToast('Error al cargar los datos', 'error');
+                hideLoading();
+            });
+        }
+
+        // --- ACTUALIZAR ESTADÍSTICAS ---
+        function updateStatistics() {
+            const total = allSurgeries.length;
+            const paid = allSurgeries.filter(s => s.isPaid).length;
+            const pending = total - paid;
+            const totalAmount = allSurgeries.reduce((sum, s) => sum + (s.price || 0), 0);
+            
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-paid').textContent = paid;
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-amount').textContent = formatCurrency(totalAmount);
+        }
+
+        surgeryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = 'Guardando...';
+            
+            showLoading('Guardando registro...');
+            
+            const id = surgeryIdInput.value;
+            const { duration, price } = calculatePriceAndDuration(dateInput.value, endTimeInput.value);
+            const surgeryData = {
+                date: dateInput.value,
+                nhc: document.getElementById('nhc').value,
+                surgery: document.getElementById('surgery').value,
+                endTime: endTimeInput.value,
+                duration: duration,
+                price: price,
+                comments: document.getElementById('comments').value,
+                isPaid: document.getElementById('is-paid').checked,
+            };
+            try {
+                if (id) {
+                    await setDoc(doc(surgeriesCollectionRef, id), surgeryData);
+                    showToast('Registro actualizado', 'success');
+                } else {
+                    await addDoc(surgeriesCollectionRef, surgeryData);
+                    showToast('Registro añadido correctamente', 'success');
+                }
+                closeModal();
+                hideLoading();
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                showToast('Error al guardar el registro', 'error');
+                hideLoading();
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Guardar';
+            }
+        });
+
+        window.editSurgery = (id) => {
+            const surgeryToEdit = allSurgeries.find(s => s.id === id);
+            if(surgeryToEdit) openModal(true, surgeryToEdit);
+        };
+
+        window.deleteSurgery = async (id) => {
+            const confirmed = await showConfirmation("¿Seguro que quieres eliminar este registro? No se puede deshacer.");
+            if (confirmed) {
+                showLoading('Eliminando registro...');
+                try {
+                    await deleteDoc(doc(surgeriesCollectionRef, id));
+                    showToast('Registro eliminado', 'success');
+                    hideLoading();
+                } catch (error) {
+                    console.error("Error al eliminar:", error);
+                    showToast('Error al eliminar el registro', 'error');
+                    hideLoading();
+                }
+            }
+        };
+
+        window.togglePaidStatus = async (id, currentStatus) => {
+            showLoading('Actualizando estado...');
+            try {
+                await updateDoc(doc(surgeriesCollectionRef, id), { isPaid: !currentStatus });
+                showToast(currentStatus ? 'Marcado como pendiente' : 'Marcado como cobrado', 'success');
+                hideLoading();
+            } catch (error) {
+                console.error("Error al cambiar estado de cobro:", error);
+                showToast('Error al actualizar el estado', 'error');
+                hideLoading();
+            }
+        };
+
+        // --- RENDERIZADO Y FILTROS ---
+        function renderFilteredSurgeries() {
+            let filtered = allSurgeries.filter(s => currentFilter === 'all' || (currentFilter === 'paid' && s.isPaid) || (currentFilter === 'pending' && !s.isPaid));
+            renderTable(filtered);
+        }
+
+        function renderTable(surgeries) {
+            const tableBody = document.getElementById('surgeries-table-body');
+            const noMsg = document.getElementById('no-surgeries-message');
+            const limitNotice = document.getElementById('records-limit-notice');
+            const totalRecordsCount = document.getElementById('total-records-count');
+            
+            // Limpiar tabla de forma eficiente
+            tableBody.innerHTML = '';
+            
+            if (surgeries.length === 0) {
+                noMsg.classList.remove('hidden');
+                noMsg.textContent = currentFilter === 'all' ? 'No hay registros. ¡Añade el primero!' : `No hay registros ${currentFilter === 'paid' ? 'cobrados' : 'pendientes'}.`;
+                limitNotice.classList.add('hidden');
+            } else {
+                noMsg.classList.add('hidden');
+                
+                // Mostrar aviso si hay más de 100 registros
+                if (surgeries.length > 100) {
+                    limitNotice.classList.remove('hidden');
+                    totalRecordsCount.textContent = surgeries.length;
+                } else {
+                    limitNotice.classList.add('hidden');
+                }
+                
+                // Limitar a 100 registros por rendimiento
+                const displaySurgeries = surgeries.slice(0, 100);
+                
+                // Ordenar por fecha y hora
+                displaySurgeries.sort((a, b) => new Date(a.date + 'T' + a.endTime) - new Date(b.date + 'T' + b.endTime));
+                
+                // Usar DocumentFragment para mejor rendimiento
+                const fragment = document.createDocumentFragment();
+                
+                displaySurgeries.forEach(s => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="togglePaidStatus('${s.id}', ${s.isPaid})" aria-label="${s.isPaid ? 'Marcar como pendiente' : 'Marcar como cobrado'}" class="p-1 rounded-full transition-colors duration-200 ${s.isPaid ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${s.isPaid ? '<path d="M20 6 9 17l-5-5"/>' : '<path d="M6 18 18 6M6 6l12 12"/>'}</svg>
+                            </button>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">${formatDate(s.date)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${s.nhc}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${s.surgery}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${s.endTime}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${s.duration || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap font-semibold">${formatCurrency(s.price)}</td>
+                        <td class="px-6 py-4 text-xs max-w-xs truncate" title="${s.comments}">${s.comments}</td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button onclick="editSurgery('${s.id}')" aria-label="Editar registro" class="text-blue-600 hover:text-blue-800 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </button>
+                                <button onclick="deleteSurgery('${s.id}')" aria-label="Eliminar registro" class="text-red-600 hover:text-red-800 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    fragment.appendChild(row);
+                });
+                
+                tableBody.appendChild(fragment);
+            }
+        }
+
+        document.getElementById('filter-controls').addEventListener('click', (e) => {
+            if (e.target.matches('.filter-btn')) {
+                currentFilter = e.target.dataset.filter;
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('filter-btn-active'));
+                e.target.classList.add('filter-btn-active');
+                renderFilteredSurgeries();
+            }
+        });
+
+        // --- FUNCIÓN DE EXPORTACIÓN A EXCEL CON MANEJO DE ERRORES ---
+        exportExcelBtn.addEventListener('click', () => {
+            try {
+                showLoading('Generando archivo Excel...');
+                
+                const filteredData = allSurgeries.filter(s => 
+                    currentFilter === 'all' || 
+                    (currentFilter === 'paid' && s.isPaid) || 
+                    (currentFilter === 'pending' && !s.isPaid)
+                );
+                
+                if (filteredData.length === 0) {
+                    showToast('No hay registros para exportar', 'error');
+                    hideLoading();
+                    return;
+                }
+                
+                const dataForExport = filteredData.map(s => ({
+                    'Cobrado': s.isPaid ? 'Sí' : 'No',
+                    'Fecha': formatDate(s.date),
+                    'NHC': s.nhc,
+                    'Cirugía': s.surgery,
+                    'Hora Fin': s.endTime,
+                    'Duración': s.duration,
+                    'Precio (€)': s.price,
+                    'Comentarios': s.comments
+                }));
+                
+                const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Registros");
+                
+                // Generar nombre de archivo con fecha
+                const today = new Date().toISOString().split('T')[0];
+                const filename = `registros_quirurgicos_${today}.xlsx`;
+                
+                XLSX.writeFile(workbook, filename);
+                showToast(`Archivo exportado: ${filename}`, 'success');
+                hideLoading();
+            } catch (error) {
+                console.error("Error al exportar:", error);
+                showToast('Error al exportar a Excel', 'error');
+                hideLoading();
+            }
+        });
+
+        // --- FUNCIONES AUXILIARES ---
+        const formatCurrency = (amount) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+        const formatDate = (dateStr) => new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(dateStr + 'T00:00:00'));
+        
+        function showConfirmation(message) {
+            return new Promise(resolve => {
+                const box = document.createElement('div');
+                box.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+                box.innerHTML = `
+                    <div class="bg-white p-8 rounded-xl text-center max-w-sm w-full mx-4 shadow-lg">
+                        <p class="mb-6 text-gray-700">${message}</p>
+                        <button id="confirm-yes" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg mr-2 hover:bg-red-700">Sí, continuar</button>
+                        <button id="confirm-no" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancelar</button>
+                    </div>
+                `;
+                document.body.appendChild(box);
+                box.querySelector('#confirm-yes').onclick = () => { document.body.removeChild(box); resolve(true); };
+                box.querySelector('#confirm-no').onclick = () => { document.body.removeChild(box); resolve(false); };
+            });
+        }
+
+        // --- FUNCIÓN PARA ALTERNAR VISIBILIDAD DE CONTRASEÑA ---
+        window.togglePasswordVisibility = (inputId) => {
+            const input = document.getElementById(inputId);
+            const eyeIcon = document.getElementById(`eye-icon-${inputId}`);
+            const eyeOffIcon = document.getElementById(`eye-off-icon-${inputId}`);
+            if (input.type === "password") {
+                input.type = "text";
+                eyeIcon.classList.add('hidden');
+                eyeOffIcon.classList.remove('hidden');
+            } else {
+                input.type = "password";
+                eyeIcon.classList.remove('hidden');
+                eyeOffIcon.classList.add('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
